@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore - REFA AI Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            border-bottom: 1px solid #1a1a1a;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 48px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #888;
+            font-size: 18px;
+        }
+        
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px 0;
+        }
+        
+        .gallery-item {
+            position: relative;
+            background: #1a1a1a;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid #2a2a2a;
+        }
+        
+        .gallery-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            border-color: #667eea;
+        }
+        
+        .gallery-item-image {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .gallery-item-video {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            display: block;
+        }
+        
+        .gallery-item-info {
+            padding: 15px;
+        }
+        
+        .gallery-item-type {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        
+        .gallery-item-prompt {
+            color: #ccc;
+            font-size: 14px;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .gallery-item-date {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+            font-size: 18px;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 60px 20px;
+            color: #ff6b6b;
+            font-size: 18px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            overflow: auto;
+        }
+        
+        .modal-content {
+            position: relative;
+            margin: 5% auto;
+            max-width: 90%;
+            max-height: 90vh;
+        }
+        
+        .modal-content img,
+        .modal-content video {
+            width: 100%;
+            height: auto;
+            max-height: 90vh;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            width: 40px;
+            height: 40px;
+        }
+        
+        .modal-close:hover {
+            color: #667eea;
+        }
+        
+        .modal-info {
+            color: #fff;
+            margin-top: 20px;
+            padding: 20px;
+            background: #1a1a1a;
+            border-radius: 12px;
+        }
+        
+        .modal-info h3 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+        
+        .modal-info p {
+            color: #ccc;
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 768px) {
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 15px;
+            }
+            
+            .header h1 {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Explore</h1>
+            <p>Галерея созданных контентов REFA AI</p>
+        </div>
+        
+        <div id="gallery" class="gallery">
+            <div class="loading">Загрузка галереи...</div>
+        </div>
+    </div>
+    
+    <div id="modal" class="modal">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <div class="modal-content">
+            <div id="modal-media"></div>
+            <div class="modal-info" id="modal-info"></div>
+        </div>
+    </div>
+    
+    <script>
+        let galleryData = [];
+        
+        async function loadGallery() {
+            try {
+                const response = await fetch('gallery/gallery.json');
+                if (!response.ok) {
+                    throw new Error('Failed to load gallery');
+                }
+                const data = await response.json();
+                galleryData = data.items || [];
+                renderGallery();
+            } catch (error) {
+                console.error('Error loading gallery:', error);
+                document.getElementById('gallery').innerHTML = 
+                    '<div class="error">Ошибка загрузки галереи. Попробуйте позже.</div>';
+            }
+        }
+        
+        function renderGallery() {
+            const gallery = document.getElementById('gallery');
+            
+            if (galleryData.length === 0) {
+                gallery.innerHTML = '<div class="loading">Галерея пуста. Результаты появятся здесь после генерации.</div>';
+                return;
+            }
+            
+            gallery.innerHTML = galleryData.map(item => {
+                const mediaPath = item.type === 'video' 
+                    ? `gallery/videos/${item.filename}`
+                    : `gallery/images/${item.filename}`;
+                
+                const typeLabel = item.job_type === 'S2V' ? 'S2V' : 
+                                 item.job_type === 'T2V' ? 'T2V' : 
+                                 item.job_type === 'T2I' ? 'T2I' : 'AI';
+                
+                const date = new Date(item.created_at);
+                const dateStr = date.toLocaleDateString('ru-RU', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                
+                if (item.type === 'video') {
+                    return `
+                        <div class="gallery-item" onclick="openModal(${galleryData.indexOf(item)})">
+                            <video class="gallery-item-video" muted>
+                                <source src="${mediaPath}" type="video/mp4">
+                            </video>
+                            <div class="gallery-item-info">
+                                <span class="gallery-item-type">${typeLabel}</span>
+                                <div class="gallery-item-prompt">${escapeHtml(item.prompt)}</div>
+                                <div class="gallery-item-date">${dateStr}</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="gallery-item" onclick="openModal(${galleryData.indexOf(item)})">
+                            <img class="gallery-item-image" src="${mediaPath}" alt="${escapeHtml(item.prompt)}" loading="lazy">
+                            <div class="gallery-item-info">
+                                <span class="gallery-item-type">${typeLabel}</span>
+                                <div class="gallery-item-prompt">${escapeHtml(item.prompt)}</div>
+                                <div class="gallery-item-date">${dateStr}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+            
+            // Автовоспроизведение видео при наведении
+            document.querySelectorAll('.gallery-item video').forEach(video => {
+                const item = video.closest('.gallery-item');
+                item.addEventListener('mouseenter', () => {
+                    video.play();
+                });
+                item.addEventListener('mouseleave', () => {
+                    video.pause();
+                    video.currentTime = 0;
+                });
+            });
+        }
+        
+        function openModal(index) {
+            const item = galleryData[index];
+            const modal = document.getElementById('modal');
+            const modalMedia = document.getElementById('modal-media');
+            const modalInfo = document.getElementById('modal-info');
+            
+            const mediaPath = item.type === 'video' 
+                ? `gallery/videos/${item.filename}`
+                : `gallery/images/${item.filename}`;
+            
+            const typeLabel = item.job_type === 'S2V' ? 'Speech-to-Video' : 
+                             item.job_type === 'T2V' ? 'Text-to-Video' : 
+                             item.job_type === 'T2I' ? 'Text-to-Image' : 'AI Generated';
+            
+            if (item.type === 'video') {
+                modalMedia.innerHTML = `<video controls autoplay><source src="${mediaPath}" type="video/mp4"></video>`;
+            } else {
+                modalMedia.innerHTML = `<img src="${mediaPath}" alt="${escapeHtml(item.prompt)}">`;
+            }
+            
+            let infoHtml = `<h3>${typeLabel}</h3><p><strong>Промпт:</strong> ${escapeHtml(item.prompt)}</p>`;
+            if (item.tts_text) {
+                infoHtml += `<p><strong>Текст:</strong> ${escapeHtml(item.tts_text)}</p>`;
+            }
+            const date = new Date(item.created_at);
+            infoHtml += `<p><strong>Дата:</strong> ${date.toLocaleString('ru-RU')}</p>`;
+            modalInfo.innerHTML = infoHtml;
+            
+            modal.style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            document.getElementById('modal-media').innerHTML = '';
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            const modal = document.getElementById('modal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+        
+        // Загружаем галерею при загрузке страницы
+        loadGallery();
+    </script>
+</body>
+</html>
+
