@@ -1,0 +1,8 @@
+# Игнорируем медиафайлы, но коммитим gallery.json
+*.mp4
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.gif
+
