@@ -95,10 +95,38 @@
             pointer-events: none;
         }
 
+        .media-wrap {
+            position: relative;
+            width: 100%;
+            height: 280px;
+            background: #101018;
+        }
+
+        .media-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            font-size: 13px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            background: radial-gradient(600px 200px at 20% 0%, rgba(124, 141, 255, 0.2), transparent 60%),
+                        linear-gradient(180deg, rgba(10, 10, 16, 0.8), rgba(10, 10, 16, 0.9));
+            border-bottom: 1px solid var(--border);
+        }
+
+        .media-wrap.is-loaded .media-placeholder {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
         .gallery-item-image,
         .gallery-item-video {
             width: 100%;
-            height: 280px;
+            height: 100%;
             object-fit: cover;
             display: block;
             background: #101018;
@@ -229,8 +257,7 @@
                 gap: 14px;
             }
 
-            .gallery-item-image,
-            .gallery-item-video {
+            .media-wrap {
                 height: 220px;
             }
 
@@ -288,7 +315,7 @@
                 return;
             }
             
-            gallery.innerHTML = galleryData.map(item => {
+            gallery.innerHTML = galleryData.map((item, index) => {
                 const mediaPath = item.type === 'video' 
                     ? `gallery/videos/${item.filename}`
                     : `gallery/images/${item.filename}`;
@@ -303,13 +330,18 @@
                     month: 'long',
                     day: 'numeric'
                 });
+
+                const previewLabel = item.type === 'video' ? 'Video preview' : 'Image preview';
                 
                 if (item.type === 'video') {
                     return `
-                        <div class="gallery-item" onclick="openModal(${galleryData.indexOf(item)})">
-                            <video class="gallery-item-video" muted>
+                        <div class="gallery-item" onclick="openModal(${index})">
+                            <div class="media-wrap">
+                                <div class="media-placeholder">${previewLabel}</div>
+                                <video class="gallery-item-video" muted preload="metadata" playsinline>
                                 <source src="${mediaPath}" type="video/mp4">
-                            </video>
+                                </video>
+                            </div>
                             <div class="gallery-item-info">
                                 <span class="gallery-item-type">${typeLabel}</span>
                                 <div class="gallery-item-prompt">${escapeHtml(item.prompt)}</div>
@@ -319,8 +351,11 @@
                     `;
                 } else {
                     return `
-                        <div class="gallery-item" onclick="openModal(${galleryData.indexOf(item)})">
-                            <img class="gallery-item-image" src="${mediaPath}" alt="${escapeHtml(item.prompt)}" loading="lazy">
+                        <div class="gallery-item" onclick="openModal(${index})">
+                            <div class="media-wrap">
+                                <div class="media-placeholder">${previewLabel}</div>
+                                <img class="gallery-item-image" src="${mediaPath}" alt="${escapeHtml(item.prompt)}" loading="lazy">
+                            </div>
                             <div class="gallery-item-info">
                                 <span class="gallery-item-type">${typeLabel}</span>
                                 <div class="gallery-item-prompt">${escapeHtml(item.prompt)}</div>
@@ -340,6 +375,24 @@
                 item.addEventListener('mouseleave', () => {
                     video.pause();
                     video.currentTime = 0;
+                });
+            });
+
+            document.querySelectorAll('.media-wrap img').forEach(img => {
+                img.addEventListener('load', () => {
+                    img.parentElement.classList.add('is-loaded');
+                });
+                img.addEventListener('error', () => {
+                    img.parentElement.querySelector('.media-placeholder').textContent = 'Preview unavailable';
+                });
+            });
+
+            document.querySelectorAll('.media-wrap video').forEach(video => {
+                video.addEventListener('loadeddata', () => {
+                    video.parentElement.classList.add('is-loaded');
+                });
+                video.addEventListener('error', () => {
+                    video.parentElement.querySelector('.media-placeholder').textContent = 'Preview unavailable';
                 });
             });
         }
